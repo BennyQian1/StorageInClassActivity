@@ -1,5 +1,6 @@
 package com.example.networkapp
 
+import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
@@ -14,10 +15,19 @@ import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.squareup.picasso.Picasso
 import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileOutputStream
+import java.io.FileReader
+import java.io.IOException
 
 // TODO (1: Fix any bugs)
 // TODO (2: Add function saveComic(...) to save comic info when downloaded
 // TODO (3: Automatically load previously saved comic when app starts)
+
+
+private lateinit var file: File
+private val internalFilename = "my_file"
 
 class MainActivity : AppCompatActivity() {
 
@@ -34,6 +44,8 @@ class MainActivity : AppCompatActivity() {
 
         requestQueue = Volley.newRequestQueue(this)
 
+        file = File(filesDir, internalFilename)
+
         titleTextView = findViewById<TextView>(R.id.comicTitleTextView)
         descriptionTextView = findViewById<TextView>(R.id.comicDescriptionTextView)
         numberEditText = findViewById<EditText>(R.id.comicNumberEditText)
@@ -44,6 +56,21 @@ class MainActivity : AppCompatActivity() {
             downloadComic(numberEditText.text.toString())
         }
 
+        if (file.exists()) {
+            try {
+                val br = BufferedReader(FileReader(file))
+                val text = StringBuilder()
+                var line: String?
+                while (br.readLine().also { line = it } != null) {
+                    text.append(line)
+                    text.append('\n')
+                }
+                br.close()
+                saveComic(JSONObject(text.toString()))
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
     }
 
     // Fetches comic from web as JSONObject
@@ -51,7 +78,10 @@ class MainActivity : AppCompatActivity() {
         val url = "https://xkcd.com/$comicId/info.0.json"
         requestQueue.add (
             JsonObjectRequest(url
-                , {showComic(it)}
+                , {
+                    saveComic(it)
+                    showComic(it)
+                  }
                 , {}
             )
         )
@@ -66,8 +96,8 @@ class MainActivity : AppCompatActivity() {
 
     // Implement this function
     private fun saveComic(comicObject: JSONObject) {
-
+        val outputStream = FileOutputStream(file)
+        outputStream.write(comicObject.toString().toByteArray())
+        outputStream.close()
     }
-
-
 }
